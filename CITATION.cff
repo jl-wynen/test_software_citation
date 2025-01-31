@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: TestSoftwareCitation
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Jan-Lukas
+    family-names: Wynen
+    email: jan-lukas.wynen@ess.eu
+    affiliation: ESS
+    orcid: 'https://orcid.org/0000-0002-3761-3201'
+identifiers:
+  - type: doi
+    value: 10.5072/zenodo.160822
+    description: Base Zenodo DOI
+repository-code: 'https://github.com/jl-wynen/test_software_citation'
+license: BSD-3-Clause
