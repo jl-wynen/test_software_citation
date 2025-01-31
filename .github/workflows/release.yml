@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash -l {0}  # required for conda env
+
+jobs:
+  upload-to-zenodo:
+    runs-on: ubuntu-latest
+    name: A job to update metadata and push a release to Zenodo
+    environment: release
+
+    steps:
+      - name: Upload to Zenodo
+        id: release
+        uses: megasanjay/upload-to-zenodo@v2.0.1
+        with:
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+          zenodo_token: ${{ secrets.ZENODO_TOKEN }}
+          zenodo_deposition_id: 160822
+          zenodo_publish: true
+          zenodo_sandbox: true
+          commit_message: 'chore: update ${file_name} for Zenodo release'
+          update_metadata_files: true
+#          codemeta_json: true
+          citation_cff: true
+#          zenodo_json: true
+
+      # Get the doi from the `release` step
+      - name: Get the output doi
+        run: echo "The released doi was ${{ steps.release.outputs.doi }}"
+
+  build_wheels:
+    name: Wheels
+    runs-on: 'ubuntu-22.04'
+    needs: [upload-to-zenodo]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # history required so setuptools_scm can determine version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: '.github/workflows/python-version-ci'
+
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements/wheels.txt
+
+      - name: Build wheels
+        run: python -m build
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
