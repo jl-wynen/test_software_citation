@@ -12,7 +12,7 @@ defaults:
 jobs:
   upload-to-zenodo:
     runs-on: ubuntu-latest
-    name: A job to update metadata and push a release to Zenodo
+    name: Update citation and upload to Zenodo
     environment: release
 
     steps:
