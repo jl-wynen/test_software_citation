@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import logging
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import httpx
 from pydantic import BaseModel
@@ -185,6 +185,17 @@ class Client:
         _get_logger().info("Deposition started: %s", transaction.deposition_id)
         return transaction
 
+    def continue_deposition(self, deposition_id: str) -> DepositionTransaction:
+        deposition = self.get_deposition(deposition_id)
+        if deposition['submitted'] or deposition['state'] in ('done', 'error'):
+            raise ValueError(
+                f"Cannot continue deposition {deposition_id}, "
+                f"the deposition is not in progress."
+            )
+        transaction = DepositionTransaction(self, deposition)
+        _get_logger().info("Continuing deposition %s", transaction.deposition_id)
+        return transaction
+
     def commit_deposition(self, deposition_id: str) -> None:
         response = self._request(
             "POST", f"/deposit/depositions/{deposition_id}/actions/publish"
@@ -255,7 +266,7 @@ def main() -> None:
 
     depo = DepositionMetadata(
         upload_type='software',
-        title='Test Zenodo upload',
+        title='Test Zenodo upload 3',
         description="Testing uploading to Zenodo",
         creators=[
             Person(
@@ -266,17 +277,25 @@ def main() -> None:
         ],
         access_right='open',
         license='BSD-3-Clause',
-        version='0.2',
+        version='0.3',
         prereserve_doi=True,
     )
 
     with Client(sandbox=True, token=TOKEN) as client:
         with client.start_new_deposition(depo) as transaction:
-            print("DOI", transaction.reserved_deposition_doi)
+            doi: str = transaction.reserved_deposition_doi
+            depo_id = transaction.deposition_id
+            # leak because the following code will be in a separate process on GH
+            transaction.leak()
+
+    # write CITATION.cff and make GH & PyPI releases here
+    _get_logger().info("DOI: %s", doi)
+
+    with Client(sandbox=True, token=TOKEN) as client:
+        with client.continue_deposition(depo_id) as transaction:
             r = transaction.add_file(Path('CITATION.cff'))
             r.raise_for_status()
-            # transaction.leak()
-            transaction.commit()
+            transaction.leak()
 
 
 if __name__ == "__main__":
